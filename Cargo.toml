@@ -29,7 +29,7 @@ crate-type = ["lib", "cdylib"]
 coupe = { git = "https://github.com/LIHPC-Computational-Geometry/coupe.git", optional = true }
 itertools = "0.14.*"
 mpi = { version = "0.8.*" }
-ndelement = { git = "https://github.com/bempp/ndelement", rev = "c7363aec58d84a91833c00e4ffd25c24c60f2f97", default-features = false, features = ["mpi"] }
+ndelement = { git = "https://github.com/ignacia-fp/ndelement-for-rsrs.git", default-features = false, features = ["mpi"] }
 num = "0.4"
 rlst = { git = "https://github.com/linalg-rs/rlst.git", branch = "extend_abstract_operator", default-features = false }
 serde = { version = "1", features = ["derive"], optional = true }
