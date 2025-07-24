@@ -237,15 +237,23 @@ where
         // First we receive all the data.
         let root_rank = root_rank as usize;
         let point_indices = scatterv(comm, root_rank);
+        println!("2.1");
         let coordinates = scatterv(comm, root_rank);
+        println!("2.2");
         let vertex_indices = scatterv(comm, root_rank);
+        println!("2.3");
         let vertex_owners = scatterv(comm, root_rank);
+        println!("2.4");
         let cell_indices = scatterv(comm, root_rank);
+        println!("2.5");
         let cell_points = scatterv(comm, root_rank);
+        println!("2.6");
         let cell_types = scatterv(comm, root_rank);
+        println!("2.7");
         let cell_degrees = scatterv(comm, root_rank);
+        println!("2.8");
         let cell_owners = scatterv(comm, root_rank);
-        println!("2");
+        println!("2.9");
         // Now we reassemble the grid.
 
         self.create_parallel_grid_internal(
