@@ -233,27 +233,18 @@ where
         comm: &'a C,
         root_rank: i32,
     ) -> ParallelGridImpl<'a, C, B::Grid> {
-        println!("1");
         // First we receive all the data.
         let root_rank = root_rank as usize;
         let point_indices = scatterv(comm, root_rank);
-        println!("2.1");
         let coordinates = scatterv(comm, root_rank);
-        println!("2.2");
         let vertex_indices = scatterv(comm, root_rank);
-        println!("2.3");
         let vertex_owners = scatterv(comm, root_rank);
-        println!("2.4");
         let cell_indices = scatterv(comm, root_rank);
-        println!("2.5");
         let cell_points = scatterv(comm, root_rank);
-        println!("2.6");
         let cell_types = scatterv(comm, root_rank);
-        println!("2.7");
         let cell_degrees = scatterv(comm, root_rank);
-        println!("2.8");
         let cell_owners = scatterv(comm, root_rank);
-        println!("2.9");
+
         // Now we reassemble the grid.
 
         self.create_parallel_grid_internal(
@@ -296,7 +287,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
     {
         let rank = comm.rank() as usize;
         // First we want to reorder everything so that owned data comes first in the arrays.
-        println!("1");
+
         // Reorder the vertices.
         let (vertex_indices, vertex_owners) = {
             let mut new_indices = Vec::<usize>::with_capacity(vertex_indices.len());
@@ -314,7 +305,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
 
             (new_indices, new_owners)
         };
-        println!("2");
+
         // Reorder the cell information. However, things are a bit messy with the cell points as each cell
         // may have a different number of points attached. Hence, we need to compute a new counts array for the cell points.
 
@@ -329,7 +320,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
             }
             new_owners
         };
-        println!("3");
+
         // First we reorder the cells, degrees, types and owners.
 
         let (cell_indices, cell_types, cell_degrees, cell_owners) = {
@@ -360,7 +351,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
 
             (new_indices, new_types, new_degrees, new_owners)
         };
-        println!("4");
+
         // Finally, we reorder the cell points.
         let cell_points = {
             let mut new_points = Vec::<usize>::with_capacity(cell_points.len());
@@ -379,7 +370,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
             }
             new_points
         };
-        println!("5");
+
         // Everything is properly sorted now. Can generate the local grids.
         // Need to check those routines. Implementation is not efficient right now.
         let geometry = self.create_geometry(
@@ -395,7 +386,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
             &cell_points,
             &cell_types,
         );
-        println!("6");
+
         let serial_grid = self.create_grid_from_topology_geometry(topology, geometry);
 
         // Create global indices and proper ownership information with ghost process and local index
@@ -407,7 +398,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
             synchronize_entities(comm, 1, &vertex_indices, &vertex_owners);
         let (cell_global_indices, cell_owners) =
             synchronize_entities(comm, 1, &cell_indices, &cell_owners);
-        println!("7");
+
         // For later we need a map from vertex global indices to vertex owners.
         let mut vertex_global_indices_to_owners = HashMap::<usize, usize>::new();
         for (global_index, owner) in izip!(&vertex_global_indices, &vertex_owners) {
@@ -418,7 +409,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
             };
             vertex_global_indices_to_owners.insert(*global_index, owner_rank);
         }
-        println!("8");
+
         let mut owners = vec![vertex_owners];
         let mut global_indices = vec![vertex_global_indices.clone()];
         for dim in 1..self.tdim() {
@@ -471,7 +462,7 @@ trait ParallelBuilderFunctions: Builder + GeometryBuilder + TopologyBuilder + Gr
         }
         owners.push(cell_owners);
         global_indices.push(cell_global_indices);
-        println!("9");
+
         ParallelGridImpl::new(comm, serial_grid, owners, global_indices)
     }
 
