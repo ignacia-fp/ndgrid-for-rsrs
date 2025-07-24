@@ -241,27 +241,31 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
             }
 
             line_n += 1;
-            let tags = &nodes[line_n..line_n + num_nodes_in_block];
-            let coords = &nodes[line_n + num_nodes_in_block..line_n + 2 * num_nodes_in_block];
-            for (t, c) in izip!(tags, coords) {
-                self.add_point(
-                    t.parse::<usize>().unwrap(),
-                    &c.split(" ")
-                        .map(|i| {
-                            if let Ok(j) = T::from_str(i) {
-                                j
-                            } else {
-                                panic!("Could not parse coordinate");
-                            }
-                        })
-                        .collect::<Vec<_>>(),
-                );
-            }
 
-            line_n += num_nodes_in_block + 2;
+            // Extended format: each node line has tag + coordinates all in one line
+            for _ in 0..num_nodes_in_block {
+                let line = nodes[line_n];
+                let mut parts = line.split_whitespace();
+
+                let tag_str = parts.next().expect("Missing node tag");
+                let tag = tag_str.parse::<usize>().expect("Invalid node tag");
+
+                let coords: Vec<T> = parts
+                    .map(|coord_str| {
+                        coord_str.parse::<T>().unwrap_or_else(|_| {
+                            panic!("Could not parse coordinate '{}'", coord_str);
+                        })
+                    })
+                    .collect();
+
+                self.add_point(tag, &coords);
+
+                line_n += 1;
+            }
         }
         println!("4");
-        // Load elements
+
+        // Load elements (unchanged)
         let elements = gmsh_section(&s, "Elements");
         let elements = elements.lines().collect::<Vec<_>>();
 
