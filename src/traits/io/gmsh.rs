@@ -23,6 +23,7 @@ pub trait GmshImport: Builder {
 
     /// Export as Gmsh
     fn import_from_gmsh(&mut self, filename: &str) {
+        println!("Importing Gmsh file: {}", filename);
         let content = fs::read_to_string(filename).expect("Unable to read file");
         self.import_from_gmsh_string(content);
     }
