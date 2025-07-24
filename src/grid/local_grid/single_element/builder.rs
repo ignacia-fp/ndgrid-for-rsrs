@@ -220,6 +220,8 @@ impl<T: RealScalar> GeometryBuilder for SingleElementGridBuilder<T> {
             let mut new_cell_points = Vec::<usize>::with_capacity(cell_points.len());
             println!("cell_points: {cell_points:?}");
             for id in cell_points {
+                println!("id: {id}");
+                println!("pos: {}", point_ids_to_pos[id]);
                 new_cell_points.push(point_ids_to_pos[id]);
             }
             new_cell_points
