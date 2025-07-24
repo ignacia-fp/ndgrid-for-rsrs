@@ -224,7 +224,9 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
         };
         println!("3");
         let mut line_n = 1;
+        println!("nodes:{:?}", nodes);
         for _ in 0..num_entity_blocks {
+            println!("current line: {:?}", nodes[line_n]);
             let [_entity_dim, _entity_tag, parametric, num_nodes_in_block] = nodes[line_n]
                 .split(" ")
                 .map(|i| i.parse::<usize>().unwrap())
