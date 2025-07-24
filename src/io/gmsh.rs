@@ -200,16 +200,19 @@ fn gmsh_section(s: &str, section: &str) -> String {
 impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshImport for B {
     fn import_from_gmsh_string(&mut self, s: String) {
         let format = gmsh_section(&s, "MeshFormat");
+
         // Check msh file version
         let [version, ascii_mode, _binary_mode] = format.split(" ").collect::<Vec<_>>()[..] else {
             panic!("Unrecognised gmsh format");
         };
+
         if version != "4.1" {
             unimplemented!("Unsupported gmsh file version");
         }
         if ascii_mode != "0" {
             unimplemented!("Non-ASCII gmsh files currently not supported");
         }
+
         // Load nodes
         let nodes = gmsh_section(&s, "Nodes");
         let nodes = nodes.lines().collect::<Vec<_>>();
@@ -231,9 +234,11 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
             else {
                 panic!("Unrecognised gmsh format");
             };
+
             if parametric == 1 {
-                unimplemented!("Parametric nodes currently not supported")
+                unimplemented!("Parametric nodes currently not supported");
             }
+
             line_n += 1;
             let tags = &nodes[line_n..line_n + num_nodes_in_block];
             let coords = &nodes[line_n + num_nodes_in_block..line_n + 2 * num_nodes_in_block];
@@ -251,6 +256,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
                         .collect::<Vec<_>>(),
                 );
             }
+
             line_n += num_nodes_in_block + 2;
         }
 
@@ -258,7 +264,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
         let elements = gmsh_section(&s, "Elements");
         let elements = elements.lines().collect::<Vec<_>>();
 
-        let [num_entity_blocks, _num_elements, _min_element_tag, _max_element_tag] = nodes[0]
+        let [num_entity_blocks, _num_elements, _min_element_tag, _max_element_tag] = elements[0]
             .split(" ")
             .map(|i| i.parse::<usize>().unwrap())
             .collect::<Vec<_>>()[..]
@@ -275,6 +281,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
             else {
                 panic!("Unrecognised gmsh format");
             };
+
             let (cell_type, degree) = interpret_gmsh_cell(element_type);
             let gmsh_perm = get_permutation_to_gmsh(cell_type, degree);
 
@@ -284,10 +291,12 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
                     .split(" ")
                     .map(|i| i.parse::<usize>().unwrap())
                     .collect::<Vec<_>>();
+
                 let mut cell = vec![0; line.len() - 1];
                 for (i, j) in gmsh_perm.iter().enumerate() {
                     cell[*j] = line[i + 1];
                 }
+
                 self.add_cell_from_nodes_and_type(line[0], &cell, cell_type, degree);
             }
 
