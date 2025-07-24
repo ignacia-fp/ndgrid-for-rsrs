@@ -204,19 +204,20 @@ where
 {
     fn import_from_gmsh_string(&mut self, s: String) {
         // --- Parse format line ---
+        println!("1");
         let format = gmsh_section(&s, "MeshFormat");
         let format_line = format.lines().next().expect("Empty MeshFormat section");
         let mut fmt_parts = format_line.split_whitespace();
         let version = fmt_parts.next().expect("Missing version");
         let ascii_mode = fmt_parts.next().expect("Missing ascii mode");
-
+        println!("2");
         if version != "2.2" && version != "2.0" {
             unimplemented!("Only Gmsh format 2 supported");
         }
         if ascii_mode != "0" {
             unimplemented!("Only ASCII gmsh files supported");
         }
-
+        println!("3");
         // --- Parse nodes ---
         let nodes = gmsh_section(&s, "Nodes");
         let mut lines = nodes.lines();
@@ -226,7 +227,7 @@ where
             .trim()
             .parse()
             .expect("Could not parse num_nodes");
-
+        println!("4");
         for _ in 0..num_nodes {
             let line = lines.next().expect("Unexpected EOF reading nodes");
             let mut parts = line.split_whitespace();
@@ -243,7 +244,7 @@ where
             }
             self.add_point(tag, &coords);
         }
-
+        println!("5");
         // --- Parse elements ---
         let elements = gmsh_section(&s, "Elements");
         let mut lines = elements.lines();
@@ -253,7 +254,7 @@ where
             .trim()
             .parse()
             .expect("Could not parse num_elements");
-
+        println!("6");
         for _ in 0..num_elements {
             let line = lines.next().expect("Unexpected EOF reading elements");
             let parts = line.split_whitespace().collect::<Vec<_>>();
@@ -277,6 +278,7 @@ where
 
             self.add_cell_from_nodes_and_type(element_tag, &cell, cell_type, degree);
         }
+        println!("7");
     }
 }
 
