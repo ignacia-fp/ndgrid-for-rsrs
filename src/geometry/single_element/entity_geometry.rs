@@ -55,7 +55,7 @@ impl<T: RealScalar, E: FiniteElement> Geometry for SingleElementEntityGeometry<'
             .unwrap()
         {
             let i = self.geometry.cells()[[*index, self.cell_index]];
-            pts.push(&self.geometry.points().data()[i * gdim..(i + 1) * gdim])
+            pts.push((i, &self.geometry.points().data()[i * gdim..(i + 1) * gdim]))
         }
 
         PointIter::new(pts)
@@ -68,7 +68,6 @@ impl<T: RealScalar, E: FiniteElement> Geometry for SingleElementEntityGeometry<'
         self.geometry.element().embedded_superdegree()
     }
 }
-
 /// Geometry of an entity with borrowed data
 #[derive(Debug)]
 pub struct SingleElementEntityGeometryBorrowed<'a, T: RealScalar, E: FiniteElement> {
@@ -116,7 +115,7 @@ impl<T: RealScalar, E: FiniteElement> Geometry for SingleElementEntityGeometryBo
             .unwrap()
         {
             let i = self.geometry.cells()[[*index, self.cell_index]];
-            pts.push(&self.geometry.points().data()[i * gdim..(i + 1) * gdim])
+            pts.push((i, &self.geometry.points().data()[i * gdim..(i + 1) * gdim]))
         }
 
         PointIter::new(pts)
