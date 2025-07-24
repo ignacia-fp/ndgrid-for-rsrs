@@ -200,12 +200,12 @@ fn gmsh_section(s: &str, section: &str) -> String {
 impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshImport for B {
     fn import_from_gmsh_string(&mut self, s: String) {
         let format = gmsh_section(&s, "MeshFormat");
-
+        println!("1");
         // Check msh file version
         let [version, ascii_mode, _binary_mode] = format.split(" ").collect::<Vec<_>>()[..] else {
             panic!("Unrecognised gmsh format");
         };
-
+        println!("2");
         if version != "4.1" {
             unimplemented!("Unsupported gmsh file version");
         }
@@ -224,7 +224,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
         else {
             panic!("Unrecognised gmsh format");
         };
-
+        println!("3");
         let mut line_n = 1;
         for _ in 0..num_entity_blocks {
             let [_entity_dim, _entity_tag, parametric, num_nodes_in_block] = nodes[line_n]
@@ -259,7 +259,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
 
             line_n += num_nodes_in_block + 2;
         }
-
+        println!("4");
         // Load elements
         let elements = gmsh_section(&s, "Elements");
         let elements = elements.lines().collect::<Vec<_>>();
@@ -271,7 +271,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
         else {
             panic!("Unrecognised gmsh format");
         };
-
+        println!("5");
         let mut line_n = 1;
         for _ in 0..num_entity_blocks {
             let [_entity_dim, _entity_tag, element_type, num_elements_in_block] = elements[line_n]
@@ -302,6 +302,7 @@ impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshIm
 
             line_n += num_elements_in_block;
         }
+        println!("6");
     }
 }
 
