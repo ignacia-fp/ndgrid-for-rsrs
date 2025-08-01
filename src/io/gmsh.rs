@@ -197,108 +197,114 @@ fn gmsh_section(s: &str, section: &str) -> String {
     String::from(a[1].split(&format!("\n$End{section}")).collect::<Vec<_>>()[0])
 }
 
-impl<T: FromStr, B: Builder<T = T, EntityDescriptor = ReferenceCellType>> GmshImport for B {
+impl<
+        T: FromStr + Zero + std::marker::Copy,
+        B: Builder<T = T, EntityDescriptor = ReferenceCellType>,
+    > GmshImport for B
+where
+    <T as FromStr>::Err: std::fmt::Debug,
+{
     fn import_from_gmsh_string(&mut self, s: String) {
+        // --- Parse MeshFormat section ---
         let format = gmsh_section(&s, "MeshFormat");
-        // Check msh file version
-        let [version, ascii_mode, _binary_mode] = format.split(" ").collect::<Vec<_>>()[..] else {
-            panic!("Unrecognised gmsh version format");
-        };
+        let mut format_parts = format.split_whitespace();
+        let version = format_parts.next().unwrap();
+        let ascii_mode = format_parts.next().unwrap();
+
         if version != "4.1" {
             unimplemented!("Unsupported gmsh file version");
         }
         if ascii_mode != "0" {
             unimplemented!("Non-ASCII gmsh files currently not supported");
         }
-        // Load nodes
-        let nodes = gmsh_section(&s, "Nodes");
-        let nodes = nodes.lines().collect::<Vec<_>>();
 
-        let [num_entity_blocks, _num_nodes, _min_node_tag, _max_node_tag] = nodes[0]
-            .trim()
-            .split(" ")
-            .map(|i| i.parse::<usize>().unwrap())
-            .collect::<Vec<_>>()[..]
-        else {
-            panic!("Unrecognised gmsh format for node blocks");
-        };
+        // --- Parse Nodes section ---
+        let nodes = gmsh_section(&s, "Nodes");
+        let nodes: Vec<&str> = nodes.lines().collect();
+
+        let mut header_parts = nodes[0].split_whitespace();
+        let num_entity_blocks = header_parts.next().unwrap().parse::<usize>().unwrap();
+        // _num_nodes, _min_node_tag, _max_node_tag are unused
 
         let mut line_n = 1;
+        let mut coords = [T::zero(); 3];
         for _ in 0..num_entity_blocks {
-            let [_entity_dim, _entity_tag, parametric, num_nodes_in_block] = nodes[line_n]
-                .trim()
-                .split(" ")
-                .map(|i| i.parse::<usize>().unwrap())
-                .collect::<Vec<_>>()[..]
-            else {
-                panic!("Unrecognised gmsh format for nodes");
-            };
+            let mut block_header = nodes[line_n].split_whitespace();
+            let _entity_dim = block_header.next().unwrap().parse::<usize>().unwrap();
+            let _entity_tag = block_header.next().unwrap().parse::<usize>().unwrap();
+            let parametric = block_header.next().unwrap().parse::<usize>().unwrap();
+            let num_nodes_in_block = block_header.next().unwrap().parse::<usize>().unwrap();
+
             if parametric == 1 {
-                unimplemented!("Parametric nodes currently not supported")
+                unimplemented!("Parametric nodes currently not supported");
             }
+
             line_n += 1;
             let tags = &nodes[line_n..line_n + num_nodes_in_block];
-            let coords = &nodes[line_n + num_nodes_in_block..line_n + 2 * num_nodes_in_block];
-            for (t, c) in izip!(tags, coords) {
-                self.add_point(
-                    t.parse::<usize>().unwrap(),
-                    &c.trim()
-                        .split(" ")
-                        .map(|i| {
-                            if let Ok(j) = T::from_str(i) {
-                                j
-                            } else {
-                                panic!("Could not parse coordinate");
-                            }
-                        })
-                        .collect::<Vec<_>>(),
-                );
+            let coords_lines = &nodes[line_n + num_nodes_in_block..line_n + 2 * num_nodes_in_block];
+
+            for (t_line, c_line) in izip!(tags, coords_lines) {
+                let tag = t_line.trim().parse::<usize>().unwrap();
+
+                for (i, val) in c_line.trim().split_whitespace().enumerate() {
+                    coords[i] = T::from_str(val).expect("Could not parse coordinate");
+                }
+
+                self.add_point(tag, &coords);
             }
+
             line_n += num_nodes_in_block * 2;
         }
 
-        // Load elements
+        // --- Parse Elements section ---
         let elements = gmsh_section(&s, "Elements");
-        let elements = elements.lines().collect::<Vec<_>>();
+        let elements: Vec<&str> = elements.lines().collect();
 
-        let [num_entity_blocks, _num_elements, _min_element_tag, _max_element_tag] = elements[0]
-            .trim()
-            .split(" ")
-            .map(|i| i.parse::<usize>().unwrap())
-            .collect::<Vec<_>>()[..]
-        else {
-            panic!("Unrecognised gmsh format");
-        };
+        let mut header_parts = elements[0].split_whitespace();
+        let num_entity_blocks = header_parts.next().unwrap().parse::<usize>().unwrap();
+        // _num_elements, _min_element_tag, _max_element_tag are unused
 
-        let mut line_n = 1;
+        line_n = 1;
+        let mut cell = vec![0usize; 32]; // Arbitrary max size, will be trimmed
+
         for _ in 0..num_entity_blocks {
-            let [_entity_dim, _entity_tag, element_type, num_elements_in_block] = elements[line_n]
-                .trim()
-                .split(" ")
-                .map(|i| i.parse::<usize>().unwrap())
-                .collect::<Vec<_>>()[..]
-            else {
-                panic!("Unrecognised gmsh format");
-            };
+            let mut block_header = elements[line_n].split_whitespace();
+            let _entity_dim = block_header.next().unwrap().parse::<usize>().unwrap();
+            let _entity_tag = block_header.next().unwrap().parse::<usize>().unwrap();
+            let element_type = block_header.next().unwrap().parse::<usize>().unwrap();
+            let num_elements_in_block = block_header.next().unwrap().parse::<usize>().unwrap();
+
             let (cell_type, degree) = interpret_gmsh_cell(element_type);
             let gmsh_perm = get_permutation_to_gmsh(cell_type, degree);
+            let num_nodes_per_cell = gmsh_perm.len();
 
             line_n += 1;
             for line in &elements[line_n..line_n + num_elements_in_block] {
-                let line = line
-                    .trim()
-                    .split(" ")
-                    .map(|i| i.parse::<usize>().unwrap())
-                    .collect::<Vec<_>>();
-                let mut cell = vec![0; line.len() - 1];
-                for (i, j) in gmsh_perm.iter().enumerate() {
-                    cell[*j] = line[i + 1];
+                let mut iter = line.split_whitespace().map(|i| i.parse::<usize>().unwrap());
+                let tag = iter.next().unwrap();
+
+                let nodes: Vec<usize> = iter.collect(); // usually small, e.g. 3 or 4
+                debug_assert_eq!(nodes.len(), num_nodes_per_cell);
+
+                for (i, &j) in gmsh_perm.iter().enumerate() {
+                    cell[i] = nodes[j];
                 }
-                self.add_cell_from_nodes_and_type(line[0], &cell, cell_type, degree);
+
+                self.add_cell_from_nodes_and_type(
+                    tag,
+                    &cell[..num_nodes_per_cell],
+                    cell_type,
+                    degree,
+                );
             }
 
             line_n += num_elements_in_block;
         }
+    }
+
+    fn import_from_gmsh(&mut self, filename: &str) {
+        let content = std::fs::read_to_string(filename).expect("Unable to read file");
+        self.import_from_gmsh_string(content);
     }
 }
 
